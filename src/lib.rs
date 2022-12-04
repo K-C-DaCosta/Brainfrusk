@@ -1,4 +1,6 @@
 use std::io::{Read, Write};
+mod instruction;
+use instruction::*; 
 
 pub struct BrainFrusk<'inst, 'mem> {
     memory_buffer: &'mem mut [u8],
@@ -16,7 +18,7 @@ impl<'inst, 'mem> BrainFrusk<'inst, 'mem> {
             data_ptr: 0,
         }
     }
-    
+
     pub fn with_memory<Buf>(mut self, buffer: &'mem mut [u8]) -> Self {
         self.memory_buffer = buffer;
         self
@@ -34,63 +36,3 @@ impl<'inst, 'mem> BrainFrusk<'inst, 'mem> {
     }
 }
 
-#[derive(Copy, Clone)]
-pub enum Instruction {
-    IncrementDataPtr,
-    DecrementDataPtr,
-    IncrementBytePtr,
-    DecrementBytePtr,
-    OutputByte,
-    InputByte,
-    LoopOpen { close_location: usize },
-    LoopClose { open_location: usize },
-}
-
-impl Instruction {
-    pub fn execute<'a, 'b>(self, state: &mut BrainFrusk<'a, 'b>) {
-        match self {
-            Self::IncrementDataPtr => {
-                state.data_ptr += 1;
-            }
-            
-            Self::DecrementDataPtr => {
-                state.data_ptr -= 1;
-            }
-            
-            Self::IncrementBytePtr => {
-                state.memory_buffer[state.data_ptr] += 1;
-            }
-            
-            Self::DecrementBytePtr => {
-                state.memory_buffer[state.data_ptr] -= 1;
-            }
-
-            Self::OutputByte => {
-                let output = &[state.memory_buffer[state.data_ptr]][..];
-                std::io::stdout()
-                    .write_all(output)
-                    .expect("failed to read from std_out");
-            }
-
-            Self::InputByte => {
-                let mut input_byte = [0u8];
-                std::io::stdin()
-                    .read_exact(&mut input_byte)
-                    .expect("failed to read from std_in");
-                state.memory_buffer[state.data_ptr] = input_byte[0];
-            }
-
-        
-            Self::LoopOpen { close_location } =>{
-                if state.data() == 0 {
-                    state.instruction_ptr = close_location-1;
-                }
-            }
-            Self::LoopClose { open_location } => {
-                if state.data() != 0{
-                    state.instruction_ptr = open_location-1;
-                }
-            }
-        }
-    }
-}
