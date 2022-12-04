@@ -47,3 +47,40 @@ impl<'inst, 'mem> Interpreter<'inst, 'mem> {
         }
     }
 }
+
+
+#[test]
+fn two_plus_five() {
+    let source = r"
+    ++       #Cell c0 = 2
+    > +++++  #Cell c1 = 5
+    [        #Start your loops with your cell pointer on the loop counter (c1 in our case)
+    < +      #Add 1 to c0
+    > -      #Subtract 1 from c1
+    ]        #End your loops with the cell pointer on the loop counter
+
+    ++++ ++++  #c1 = 8 and this will be our loop counter again
+    [
+    < +++ +++  #Add 6 to c0
+    > -        #Subtract 1 from c1
+    ]
+    < .        #Print out c0 which has the value 55 which translates to 
+    ";
+    let mut tokens = Instruction::parse_str(source);
+    let mut memory = vec![0u8; 32];
+    Interpreter::new()
+        .with_instruction_buffer(&mut tokens)
+        .with_memory(&mut memory)
+        .run();
+}
+
+#[test]
+fn hello_world() {
+    let source = r"++++++++[>++++[>++>+++>+++>+<<<<-]>+>+>->>+[<]<-]>>.>---.+++++++..+++.>>.<-.<.+++.------.--------.>>+.>++.";
+    let mut tokens = Instruction::parse_str(source);
+    let mut memory = vec![0u8; 1024];
+    Interpreter::new()
+        .with_instruction_buffer(&mut tokens)
+        .with_memory(&mut memory)
+        .run();
+}

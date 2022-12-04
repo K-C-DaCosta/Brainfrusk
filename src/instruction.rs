@@ -74,12 +74,25 @@ impl Instruction {
     /// # Description
     /// parses brainfuck source into tokens used by the runtime (or compiler if I get there)
     pub fn parse_str(source: &str) -> Vec<Instruction> {
+        let source = Self::strip_source_of_whitespace_and_comments(source);
+        println!("stripped-source:\"{}\"", source);
         let mut output = vec![Instruction::NOP; source.len()];
-        Self::tokenize_string(source, &mut output);
+        Self::tokenize_string(&source, &mut output);
         Self::compute_bracket_indexes(&mut output);
         output
     }
-    fn tokenize_string(source:&str,output:&mut [Instruction]){
+    fn strip_source_of_whitespace_and_comments(source: &str) -> String {
+        source
+            .lines()
+            .flat_map(|line| {
+                line.chars()
+                    .filter(|c| !c.is_whitespace())
+                    .take_while(|&c| c != '#')
+            })
+            .collect::<String>()
+    }
+
+    fn tokenize_string(source: &str, output: &mut [Instruction]) {
         for (idx, (c, inst)) in source.chars().zip(output.iter_mut()).enumerate() {
             *inst = match c {
                 '>' => Self::IncrementDataPtr,
@@ -97,7 +110,7 @@ impl Instruction {
             };
         }
     }
-    fn compute_bracket_indexes(output:&mut [Instruction]){
+    fn compute_bracket_indexes(output: &mut [Instruction]) {
         //basically i use a bracket stack to detect matching brackets
         //when matching brackets are detected I update index info
         let mut bracket_stack = Vec::new();
@@ -116,22 +129,21 @@ impl Instruction {
                 }
                 Self::LoopClose { open_location } => {
                     let matching_open_token = bracket_stack.pop().expect("mismatching brackets");
-                
+
                     //save instruction location for close location
                     let cached_close_location = *open_location;
-                    
+
                     //write open location to close location
                     *open_location = matching_open_token
                         .bracket_location()
                         .expect("matching open token should be a bracket");
-                    
+
                     //write open location to close location tag
-                    if let Self::LoopOpen { close_location } = matching_open_token{
+                    if let Self::LoopOpen { close_location } = matching_open_token {
                         *close_location = cached_close_location;
                     }
                 }
                 _ => (),
             });
-
     }
 }
