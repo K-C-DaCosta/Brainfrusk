@@ -1,15 +1,15 @@
 use std::io::{Read, Write};
 mod instruction;
-use instruction::*; 
+pub use instruction::*;
 
-pub struct BrainFrusk<'inst, 'mem> {
+pub struct Interpreter<'inst, 'mem> {
     memory_buffer: &'mem mut [u8],
     instruction_buffer: &'inst mut [Instruction],
     instruction_ptr: usize,
     data_ptr: usize,
 }
 
-impl<'inst, 'mem> BrainFrusk<'inst, 'mem> {
+impl<'inst, 'mem> Interpreter<'inst, 'mem> {
     pub fn new() -> Self {
         Self {
             memory_buffer: &mut [],
@@ -19,7 +19,7 @@ impl<'inst, 'mem> BrainFrusk<'inst, 'mem> {
         }
     }
 
-    pub fn with_memory<Buf>(mut self, buffer: &'mem mut [u8]) -> Self {
+    pub fn with_memory(mut self, buffer: &'mem mut [u8]) -> Self {
         self.memory_buffer = buffer;
         self
     }
@@ -29,10 +29,21 @@ impl<'inst, 'mem> BrainFrusk<'inst, 'mem> {
         self
     }
 
-    pub fn data(&self)->u8{
-        unsafe{
-            *self.memory_buffer.get_unchecked(self.data_ptr)
+    fn data(&self) -> u8 {
+        unsafe { *self.memory_buffer.get_unchecked(self.data_ptr) }
+    }
+
+    fn current_instruction(&self) -> Instruction {
+        self.instruction_buffer[self.instruction_ptr]
+    }
+
+    fn instruction_pointer_in_bounds(&self) -> bool {
+        self.instruction_ptr < self.instruction_buffer.len()
+    }
+
+    pub fn run(&mut self) {
+        while self.instruction_pointer_in_bounds() {
+            self.current_instruction().execute(self);
         }
     }
 }
-

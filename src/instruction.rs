@@ -1,6 +1,6 @@
 use super::*;
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub enum Instruction {
     NOP,
     IncrementDataPtr,
@@ -22,7 +22,7 @@ impl Instruction {
         };
         Some(loc)
     }
-    pub fn execute<'a, 'b>(self, state: &mut BrainFrusk<'a, 'b>) {
+    pub fn execute<'a, 'b>(self, state: &mut Interpreter<'a, 'b>) {
         match self {
             Self::IncrementDataPtr => {
                 state.data_ptr += 1;
@@ -82,10 +82,10 @@ impl Instruction {
     fn tokenize_string(source:&str,output:&mut [Instruction]){
         for (idx, (c, inst)) in source.chars().zip(output.iter_mut()).enumerate() {
             *inst = match c {
-                '>' => Self::IncrementBytePtr,
-                '<' => Self::DecrementBytePtr,
-                '+' => Self::IncrementDataPtr,
-                '-' => Self::DecrementDataPtr,
+                '>' => Self::IncrementDataPtr,
+                '<' => Self::DecrementDataPtr,
+                '+' => Self::IncrementBytePtr,
+                '-' => Self::DecrementBytePtr,
                 ',' => Self::InputByte,
                 '.' => Self::OutputByte,
                 //store instruction location for bracket tokens
