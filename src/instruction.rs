@@ -3,10 +3,14 @@ use super::*;
 #[derive(Copy, Clone, Debug)]
 pub enum Instruction {
     NOP,
+    QuickIncrementDataPtr(usize),
+    QuickDecrementDataPtr(usize),
+    QuickIncrementByte(usize),
+    QuickDecrementByte(usize),
     IncrementDataPtr,
     DecrementDataPtr,
-    IncrementBytePtr,
-    DecrementBytePtr,
+    IncrementByte,
+    DecrementByte,
     OutputByte,
     InputByte,
     LoopOpen { close_location: usize },
@@ -22,27 +26,43 @@ impl Instruction {
         };
         Some(loc)
     }
-    pub fn execute<'a, 'b>(self, state: &mut Interpreter<'a, 'b>) {
+    pub fn execute<'a, 'b, OUT: Write>(self, state: &mut Interpreter<'a, 'b>, mut stdout: OUT) {
         match self {
             Self::IncrementDataPtr => {
                 state.data_ptr += 1;
+            }
+
+            Self::QuickIncrementDataPtr(ofx) => {
+                state.data_ptr += ofx;
             }
 
             Self::DecrementDataPtr => {
                 state.data_ptr -= 1;
             }
 
-            Self::IncrementBytePtr => {
+            Self::QuickDecrementDataPtr(ofx) => {
+                state.data_ptr -= ofx;
+            }
+
+            Self::IncrementByte => {
                 state.memory_buffer[state.data_ptr] += 1;
             }
 
-            Self::DecrementBytePtr => {
+            Self::QuickIncrementByte(ofx) => {
+                state.memory_buffer[state.data_ptr] += ofx  as u8;
+            }
+
+            Self::DecrementByte => {
                 state.memory_buffer[state.data_ptr] -= 1;
+            }
+
+            Self::QuickDecrementByte(ofx) => {
+                state.memory_buffer[state.data_ptr] -= ofx  as u8;
             }
 
             Self::OutputByte => {
                 let output = &[state.memory_buffer[state.data_ptr]][..];
-                std::io::stdout()
+                stdout
                     .write_all(output)
                     .expect("failed to read from std_out");
             }
@@ -75,12 +95,17 @@ impl Instruction {
     /// parses brainfuck source into tokens used by the runtime (or compiler if I get there)
     pub fn parse_str(source: &str) -> Vec<Instruction> {
         let source = Self::strip_source_of_whitespace_and_comments(source);
-        println!("stripped-source:\"{}\"", source);
+        // println!("stripped-source:\"{}\"", source);
         let mut output = vec![Instruction::NOP; source.len()];
         Self::tokenize_string(&source, &mut output);
         Self::compute_bracket_indexes(&mut output);
         output
     }
+
+    fn optimize_instructions(){
+
+    }
+
     fn strip_source_of_whitespace_and_comments(source: &str) -> String {
         source
             .lines()
@@ -97,8 +122,8 @@ impl Instruction {
             *inst = match c {
                 '>' => Self::IncrementDataPtr,
                 '<' => Self::DecrementDataPtr,
-                '+' => Self::IncrementBytePtr,
-                '-' => Self::DecrementBytePtr,
+                '+' => Self::IncrementByte,
+                '-' => Self::DecrementByte,
                 ',' => Self::InputByte,
                 '.' => Self::OutputByte,
                 //store instruction location for bracket tokens
@@ -110,6 +135,8 @@ impl Instruction {
             };
         }
     }
+    
+
     fn compute_bracket_indexes(output: &mut [Instruction]) {
         //basically i use a bracket stack to detect matching brackets
         //when matching brackets are detected I update index info
