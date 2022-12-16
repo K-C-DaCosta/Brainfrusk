@@ -49,7 +49,7 @@ impl Instruction {
             }
 
             Self::QuickIncrementByte(ofx) => {
-                state.memory_buffer[state.data_ptr] += ofx  as u8;
+                state.memory_buffer[state.data_ptr] += ofx as u8;
             }
 
             Self::DecrementByte => {
@@ -57,7 +57,7 @@ impl Instruction {
             }
 
             Self::QuickDecrementByte(ofx) => {
-                state.memory_buffer[state.data_ptr] -= ofx  as u8;
+                state.memory_buffer[state.data_ptr] -= ofx as u8;
             }
 
             Self::OutputByte => {
@@ -94,16 +94,119 @@ impl Instruction {
     /// # Description
     /// parses brainfuck source into tokens used by the runtime (or compiler if I get there)
     pub fn parse_str(source: &str) -> Vec<Instruction> {
+
         let source = Self::strip_source_of_whitespace_and_comments(source);
         // println!("stripped-source:\"{}\"", source);
         let mut output = vec![Instruction::NOP; source.len()];
+        let unoptimized_instructions = output.len();
         Self::tokenize_string(&source, &mut output);
+
+        Self::optimize_instructions(&mut output);
+        let optimized_intructions = output.len();
+
+        Self::reindex_branches(&mut output);
         Self::compute_bracket_indexes(&mut output);
+
+        println!(
+            "unoptimized = '{}', optimized = '{}'",
+            unoptimized_instructions, optimized_intructions
+        );
         output
     }
+    /// uses statemachine logic to
+    fn optimize_instructions(unoptimized_code: &mut Vec<Instruction>) {
+        let mut optimized_instructions = vec![];
+        let mut accum_counter = 0;
 
-    fn optimize_instructions(){
+        //to solve the last token problem
+        unoptimized_code.push(Instruction::NOP);
+        let mut current_instruction = unoptimized_code[0];
 
+        let push_unoptimizable_inst = |inst, optimized_instructions: &mut Vec<_>| {
+            if let Instruction::InputByte
+            | Instruction::OutputByte
+            | Instruction::LoopClose { .. }
+            | Instruction::LoopOpen { .. } = inst
+            {
+                optimized_instructions.push(inst);
+            }
+        };
+
+        for &mut inst in unoptimized_code.iter_mut() {
+            match current_instruction {
+                Instruction::IncrementByte => match inst {
+                    Instruction::IncrementByte => {
+                        accum_counter += 1;
+                    }
+                    _ => {
+                        optimized_instructions.push(Instruction::QuickIncrementByte(accum_counter));
+                        current_instruction = inst;
+                        accum_counter = 1;
+                        push_unoptimizable_inst(inst, &mut optimized_instructions);
+                    }
+                },
+                Instruction::DecrementByte => match inst {
+                    Instruction::DecrementByte => {
+                        accum_counter += 1;
+                    }
+                    _ => {
+                        optimized_instructions.push(Instruction::QuickDecrementByte(accum_counter));
+                        current_instruction = inst;
+                        accum_counter = 1;
+                        push_unoptimizable_inst(inst, &mut optimized_instructions);
+                    }
+                },
+                Instruction::IncrementDataPtr => match inst {
+                    Instruction::IncrementDataPtr => {
+                        accum_counter += 1;
+                    }
+                    _ => {
+                        optimized_instructions
+                            .push(Instruction::QuickIncrementDataPtr(accum_counter));
+                        current_instruction = inst;
+                        accum_counter = 1;
+
+                        push_unoptimizable_inst(inst, &mut optimized_instructions);
+                    }
+                },
+                Instruction::DecrementDataPtr => match inst {
+                    Instruction::IncrementDataPtr => {
+                        accum_counter += 1;
+                    }
+                    _ => {
+                        optimized_instructions
+                            .push(Instruction::QuickDecrementDataPtr(accum_counter));
+                        current_instruction = inst;
+                        accum_counter = 1;
+                        push_unoptimizable_inst(inst, &mut optimized_instructions);
+                    }
+                },
+                _ => {
+                    accum_counter = 1;
+                    current_instruction = inst;
+                    push_unoptimizable_inst(inst, &mut optimized_instructions);
+                }
+            }
+        }
+        //transfer optimized code to unoptimized buffer
+        unoptimized_code.clear();
+        for inst in optimized_instructions {
+            unoptimized_code.push(inst);
+        }
+    }
+
+    fn reindex_branches(code: &mut Vec<Instruction>) {
+        for (idx, inst) in code.iter_mut().enumerate() {
+            match inst {
+                Instruction::LoopClose { open_location } => {
+                    *open_location = idx;
+                }
+                Instruction::LoopOpen { close_location } => {
+                    *close_location = idx;
+                }
+                _ => (),
+            }
+        }
     }
 
     fn strip_source_of_whitespace_and_comments(source: &str) -> String {
@@ -135,7 +238,6 @@ impl Instruction {
             };
         }
     }
-    
 
     fn compute_bracket_indexes(output: &mut [Instruction]) {
         //basically i use a bracket stack to detect matching brackets

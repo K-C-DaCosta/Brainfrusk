@@ -11,3 +11,10 @@ A brainfuck interpreter(and maybe compiler eventually) written in Rust
         .with_memory(&mut memory)
         .run();
 ```
+
+
+## Tests
+For now, you can run the most computationally expensive test(mandlebrot plotter) like this:
+```
+cargo test -q mandlebrot  --release -- --nocapture
+```

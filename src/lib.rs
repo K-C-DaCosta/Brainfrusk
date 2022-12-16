@@ -1,4 +1,7 @@
-use std::{io::{self, BufReader, BufWriter, Read, Write},time::{Duration,Instant}};
+use std::{
+    io::{self, BufWriter, Read, Write},
+    time::Instant,
+};
 mod instruction;
 pub use instruction::*;
 
@@ -43,16 +46,23 @@ impl<'inst, 'mem> Interpreter<'inst, 'mem> {
 
     pub fn run(&mut self) {
         let mut stdout = BufWriter::new(io::stdout());
-        let mut t0 = Instant::now(); 
+        let mut t0 = Instant::now();
         while self.instruction_pointer_in_bounds() {
             self.current_instruction().execute(self, &mut stdout);
-            while t0.elapsed().as_millis() > 1000 {
+            if t0.elapsed().as_millis() > 1000 {
                 t0 = Instant::now();
                 stdout.flush().unwrap();
             }
         }
         stdout.flush().unwrap();
     }
+}
+
+#[test]
+fn simple_optimization_test() {
+    let source = "++[--]++";
+    let tokens = Instruction::parse_str(source);
+    println!("{:?}", tokens);
 }
 
 #[test]
@@ -84,6 +94,8 @@ fn two_plus_five() {
 fn hello_world() {
     let source = r"++++++++[>++++[>++>+++>+++>+<<<<-]>+>+>->>+[<]<-]>>.>---.+++++++..+++.>>.<-.<.+++.------.--------.>>+.>++.";
     let mut tokens = Instruction::parse_str(source);
+    // println!("optimized code = {:?}", tokens);
+
     let mut memory = vec![0u8; 1024];
     Interpreter::new()
         .with_instruction_buffer(&mut tokens)
