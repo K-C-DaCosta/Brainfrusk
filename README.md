@@ -12,9 +12,7 @@ A brainfuck interpreter(and maybe compiler eventually) written in Rust
         .run();
 ```
 
-
-## Tests
-For now, you can run the most computationally expensive test(mandlebrot plotter) like this:
+## Running Mandlebrot example
 ```
-cargo test -q mandlebrot  --release -- --nocapture
+cargo run --example=mandelbrot --release
 ```
