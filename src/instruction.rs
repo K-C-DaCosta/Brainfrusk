@@ -170,7 +170,7 @@ impl Instruction {
                     }
                 },
                 Instruction::DecrementDataPtr => match inst {
-                    Instruction::IncrementDataPtr => {
+                    Instruction::DecrementDataPtr => {
                         accum_counter += 1;
                     }
                     _ => {
