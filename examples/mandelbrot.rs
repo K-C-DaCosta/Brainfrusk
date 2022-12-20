@@ -1,7 +1,7 @@
 use brainfrusk::*;
-
-fn main() {
-    let source = "+++++++++++++[->++>>>+++++>++>+<<<<<<]>>>>>++++++>--->>>>>>>>>>+++++++++++++++[[
+use std::time; 
+const MANDLEBROT_SOURCE_BF: &str =
+    "+++++++++++++[->++>>>+++++>++>+<<<<<<]>>>>>++++++>--->>>>>>>>>>+++++++++++++++[[
         >>>>>>>>>]+[<<<<<<<<<]>>>>>>>>>-]+[>>>>>>>>[-]>]<<<<<<<<<[<<<<<<<<<]>>>>>>>>[-]+
         <<<<<<<+++++[-[->>>>>>>>>+<<<<<<<<<]>>>>>>>>>]>>>>>>>+>>>>>>>>>>>>>>>>>>>>>>>>>>
         >+<<<<<<<<<<<<<<<<<[<<<<<<<<<]>>>[-]+[>>>>>>[>>>>>>>[-]>>]<<<<<<<<<[<<<<<<<<<]>>
@@ -146,10 +146,22 @@ fn main() {
         +[-[->>>>>>>>>+<<<<<<<<<]>>>>>>>>>]>>>>>->>>>>>>>>>>>>>>>>>>>>>>>>>>-<<<<<<[<<<<
         <<<<<]]>>>]";
 
-    let mut tokens = Instruction::parse_str(source);
+fn main() {
+    let t0 = time::Instant::now();
+    let mut bytecode = Compiler::compile(MANDLEBROT_SOURCE_BF);
     let mut memory = vec![0u8; 1024];
     Interpreter::new()
-        .with_instruction_buffer(&mut tokens)
+        .with_instruction_buffer(&mut bytecode)
         .with_memory(&mut memory)
         .run();
+    println!("optimized version took '{}' seconds" ,t0.elapsed().as_secs());
+
+    let t0 = time::Instant::now();
+    let mut bytecode = Compiler::compile_unoptimized(MANDLEBROT_SOURCE_BF);
+    let mut memory = vec![0u8; 1024];
+    Interpreter::new()
+        .with_instruction_buffer(&mut bytecode)
+        .with_memory(&mut memory)
+        .run();
+    println!("unoptimized version took '{}' seconds" ,t0.elapsed().as_secs());
 }
